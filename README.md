@@ -49,6 +49,7 @@ python infer.py --input_folder /path/to/images --img_pattern "*.png" --output_fo
 Training of the localization network from synthetic data:
 
 ```bash
+export DATASET=synt-center-learn-weakly
 export OUTPUT_DIR="../exp" # optionally provided path to output dir used in src/config/synthetic/train_center_learn_weakly.py (defaults to '../exp')
 python train.py --config train_dataset.batch_size=64 \
                          train_dataset.hard_samples_size=32 \
