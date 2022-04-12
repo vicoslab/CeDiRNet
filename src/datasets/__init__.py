@@ -4,7 +4,6 @@ from .LockableSeedRandomAccess import LockableSeedRandomAccess
 from .SorghumPlantCentersDataset import SorghumPlantCentersDataset
 from .CARPKandPUCPRplusDataset import CARPKandPUCPRplusDataset
 from .TreeCountingDataset import TreeCountingDataset
-from .ImageFolderDataset import ImageFolderDataset
 from models.center_groundtruth import CenterDirGroundtruth
 
 def get_raw_dataset(name, dataset_opts):
@@ -22,8 +21,6 @@ def get_raw_dataset(name, dataset_opts):
         dataset = TreeCountingDataset(name='Oilpalm', **dataset_opts)
     elif name == "syn":
         dataset = SyntheticDataset(**dataset_opts)
-    elif name == "image_folder":
-        dataset = ImageFolderDataset(**dataset_opts)
     else:
         raise RuntimeError("Dataset {} not available".format(name))
 

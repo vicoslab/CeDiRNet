@@ -9,13 +9,13 @@ import numpy as np
 import torch
 
 from tqdm import tqdm
-from datasets import get_raw_dataset
+from datasets.ImageFolderDataset import ImageFolderDataset
 from models import get_model, get_center_model
 from utils.utils import Visualizer
 
 class CeDiRNetInfer:
     def __init__(self, args):
-        if args.get('display') and not args.get('display_to_file_only') or True:
+        if args.get('display') and not args.get('display_to_file_only'):
             plt.ion()
         else:
             plt.ioff()
@@ -31,15 +31,6 @@ class CeDiRNetInfer:
 
     def initialize(self):
         args = self.args
-
-        ###################################################################################################
-        # set dataset
-        dataset = get_raw_dataset('image_folder', dataset_opts=dict(root_dir=args['input_folder'],
-                                                                    pattern=args['img_pattern']))
-
-        self.dataset_it = torch.utils.data.DataLoader(
-            dataset, batch_size=1, shuffle=False, drop_last=False, num_workers=0,
-            pin_memory=True if args['cuda'] else False)
 
         ###################################################################################################
         # load model
@@ -96,10 +87,59 @@ class CeDiRNetInfer:
         # Visualizer
         self.visualizer = Visualizer(('image', 'centers'), to_file_only=args.get('display_to_file_only'))
 
+
     #########################################################################################################
     ## MAIN RUN FUNCTION
-    def run(self):
+    def infer_image(self, im, final_score_thr):
+
+        if len(im.shape) < 4:
+            im = im.unsqueeze(0)
+
+        # process only batch of one
+        assert im.shape[0] == 1
+
+        output_batch_ = self.model(im)
+
+        center_output = self.center_model(output_batch_, detect_centers=True)
+
+        direction_maps, center_pred, center_heatmap = [center_output[k] for k in
+                                                     ['output', 'center_pred', 'center_heatmap']]
+
+        batch_i = 0
+
+        direction_maps = direction_maps[batch_i]
+
+        # extract prediction heatmap and sorted prediction list
+        pred_heatmap = torch.relu(center_heatmap[batch_i].unsqueeze(0))
+        predictions = center_pred[batch_i][center_pred[batch_i, :, 0] == 1][:, 1:].cpu().numpy()
+
+        idx = np.argsort(predictions[:, -1])
+        predictions = predictions[idx[::-1], :]
+        if len(predictions) > 0:
+            predictions_score = predictions[:, -1]
+
+            # filter based on specific scoring thresholds
+            selected_pred_idx = np.where((predictions_score > final_score_thr))[0]
+            predictions = predictions[selected_pred_idx, :]
+            predictions_score = predictions_score[selected_pred_idx]
+        else:
+            predictions = []
+            predictions_score = []
+
+        return predictions, predictions_score, pred_heatmap, direction_maps
+
+    def run_from_folder(self):
         args = self.args
+
+        final_score_thr = args['score_thr_final']
+
+        ###################################################################################################
+        # set dataset
+        dataset = ImageFolderDataset(root_dir=args['input_folder'], pattern=args['img_pattern'])
+
+        dataset_it = torch.utils.data.DataLoader(
+            dataset, batch_size=1, shuffle=False, drop_last=False, num_workers=0,
+            pin_memory=True if args['cuda'] else False)
 
         with torch.no_grad():
 
@@ -109,68 +149,32 @@ class CeDiRNetInfer:
             assert self.center_model is not None
             self.center_model.eval()
 
-            im_image = 0
             #########################################################################################################
             ## PROCESS EACH IMAGE
-            for sample_ in tqdm(self.dataset_it):
+            for sample in tqdm(dataset_it):
 
-                im = sample_['image']
+                im = sample['image']
 
-                output_batch_ = self.model(im)
+                assert len(im.shape) == 4 and im.shape[0] == 1
 
-                center_output = self.center_model(output_batch_, detect_centers=True, **sample_)
+                predictions, predictions_score, pred_heatmap, direction_maps = self.infer_image(im, final_score_thr)
 
-                output_batch, center_pred, center_heatmap = [center_output[k] for k in ['output', 'center_pred', 'center_heatmap']]
+                im_name = sample['im_name'][0]
+                base, _ = os.path.splitext(os.path.basename(im_name))
 
-                sample_keys = sample_.keys()
-
-                for batch_i in range(min(self.dataset_it.batch_size, len(sample_['im_name']))):
-                    im_image += 1
-                    output = output_batch[batch_i:batch_i + 1]
-
-                    sample = {k: sample_[k][batch_i:batch_i + 1] for k in sample_keys}
-
-                    im_name = sample['im_name'][0]
-                    base, _ = os.path.splitext(os.path.basename(im_name))
-
-                    # extract prediction heatmap and sorted prediction list
-                    pred_heatmap = torch.relu(center_heatmap[batch_i].unsqueeze(0).unsqueeze(0))
-                    predictions = center_pred[batch_i][center_pred[batch_i, :, 0] == 1][:, 1:].cpu().numpy()
-
-                    idx = np.argsort(predictions[:, -1])
-                    predictions = predictions[idx[::-1], :]
-
-                    final_score_thr = args['score_thr_final']
+                if args['display'] is True:
+                    visualize_to_folder = os.path.join(self.args['save_dir'])
+                    os.makedirs(visualize_to_folder, exist_ok=True)
 
                     if len(predictions) > 0:
-                        predictions_score = predictions[:,-1]
-
-                        # filter based on specific scoring thresholds
-                        selected_pred_idx = np.where((predictions_score > final_score_thr))[0]
-                        predictions = predictions[selected_pred_idx, :]
-                        predictions_score = predictions_score[selected_pred_idx]
+                        plot_predictions = np.concatenate((np.array(predictions)[:, :2],
+                                                           np.zeros((len(predictions),1))), axis=1)
                     else:
-                        predictions = []
-                        predictions_score = []
+                        plot_predictions = []
 
-                    if args['display'] is True:
-
-                        visualize_to_folder = os.path.join(self.args['save_dir'])
-                        os.makedirs(visualize_to_folder, exist_ok=True)
-
-                        gt_centers = []
-                        is_difficult_gt = []
-
-                        if len(predictions) > 0:
-                            plot_predictions = np.concatenate((np.array(predictions)[:, :2],
-                                                               np.zeros((len(predictions),1))), axis=1)
-                        else:
-                            plot_predictions = []
-
-                        self.visualizer.display_centerdir_predictions(im[0], output[0], pred_heatmap[0], gt_centers,
-                                                                      is_difficult_gt,
-                                                                      plot_predictions, base, visualize_to_folder,
-                                                                      autoadjust_figure_size=args.get('autoadjust_figure_size'))
+                    self.visualizer.display_centerdir_predictions(im[0], direction_maps, pred_heatmap, [], [],
+                                                                  plot_predictions, base, visualize_to_folder,
+                                                                  autoadjust_figure_size=args.get('autoadjust_figure_size'))
 
 def parse_args():
     import argparse, json
@@ -211,7 +215,7 @@ def main():
 
     eval = CeDiRNetInfer(args)
     eval.initialize()
-    eval.run()
+    eval.run_from_folder()
 
 if __name__ == "__main__":
     main()
