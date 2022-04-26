@@ -21,7 +21,7 @@ class CenterDirGroundtruth(nn.Module):
         # Prepare buffer for location/coordinate map
         xym = self._create_xym(0)
 
-        self.register_buffer("xym", xym)
+        self.register_buffer("xym", xym, persistent=False)
 
         with torch.no_grad():
             self.gaussian_blur = GaussianLayer(num_channels=1, sigma=center_gt_blur)
