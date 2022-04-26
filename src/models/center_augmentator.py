@@ -8,8 +8,7 @@ from utils.utils import GaussianLayer
 class CenterDirAugmentator(nn.Module):
     def __init__(self, occlusion_probability=0, occlusion_type='circle', occlusion_distance_type='random',
                  occlusion_center_jitter_probability=0, occlusion_center_jitter_relative_size=0.5, occlusion_center_jitter_px=0,
-                 gaussian_noise_probability=0, gaussian_noise_blur_sigma=3, gaussian_noise_std_polar=[0.5,3], gaussian_noise_std_mask=[1,5],
-                 MAX_IMAGE_SIZE=1024):
+                 gaussian_noise_probability=0, gaussian_noise_blur_sigma=3, gaussian_noise_std_polar=[0.5,3], gaussian_noise_std_mask=[1,5]):
         super().__init__()
 
         self.occlusion_probability = occlusion_probability
@@ -23,14 +22,25 @@ class CenterDirAugmentator(nn.Module):
         self.gaussian_noise_std_mask = gaussian_noise_std_mask
         self.gaussian_noise_blur = [GaussianLayer(num_channels=4, sigma=gaussian_noise_blur_sigma)]
 
-        Y, X = torch.meshgrid(torch.arange(MAX_IMAGE_SIZE), torch.arange(MAX_IMAGE_SIZE))
+        xym = self._create_xym(0)
 
-        xym = torch.stack((X, Y), 0).float()
-        self.register_buffer("xym", xym)
+        self.register_buffer("xym", xym, persistent=False)
+
+    def _create_xym(self, size):
+        Y, X = torch.meshgrid(torch.arange(size), torch.arange(size))
+
+        return torch.stack((X, Y), 0).float()
+
+    def _get_xym(self, height, width):
+        max_size = max(height, width)
+        if max_size > min(self.xym.shape[1], self.xym.shape[2]):
+            self.xym = self._create_xym(max_size).to(self.xym.device)
+
+        return self.xym[:, 0:height, 0:width].contiguous()  # 2 x h x w
 
     def _apply_center_augmentation(self, input, gt_instance, gt_seed):
 
-        xym_s = self.xym[:, 0:input.shape[-2], 0:input.shape[-1]].contiguous()  # 2 x h x w
+        xym_s = self._get_xym(input.shape[-2], input.shape[-1])
         X,Y = xym_s[0], xym_s[1]
 
         if gt_seed is None:
