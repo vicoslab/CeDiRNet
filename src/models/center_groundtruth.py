@@ -132,6 +132,18 @@ class CenterDirGroundtruth(nn.Module):
 
         return gt_R, gt_theta, gt_sin_th, gt_cos_th, gt_center_mask
 
+    @staticmethod
+    def convert_gt_centers_to_dictionary(gt_centers, instances, ignore=None):
+
+        gt_centers_dict = [{id: gt_centers[b, id, :2].cpu().numpy()
+                            for id in range(gt_centers[b].shape[0]) if gt_centers[b, id, 0] > 0 and gt_centers[b, id, 1] > 0 and id in torch.unique(instances[b])}
+                                for b in range(len(gt_centers))]
+        if ignore is not None:
+            gt_centers_dict = [{k: c for k, c in gt_centers_dict[b].items() if ignore[b, 0][instances[b] == k].min() == 0}
+                                    for b in range(len(gt_centers))]
+
+        return gt_centers_dict
+
     def _create_empty(self, h, w):
         centerdir_gt_matrix = torch.zeros(size=[6, 1, h, w], dtype=torch.float, requires_grad=False)
 

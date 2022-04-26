@@ -3,6 +3,8 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+from models.center_groundtruth import CenterDirGroundtruth
+
 import torch
 
 class CeDiRNetProcesser:
@@ -81,29 +83,32 @@ class CeDiRNetProcesser:
 
                     sample = {k: sample_[k][batch_i:batch_i + 1] for k in sample_keys}
 
-                    if 'centerdir_groundtruth' in sample_:
-                        sample['centerdir_groundtruth'] = sample_['centerdir_groundtruth'][0][batch_i]
-
                     im_name = sample['im_name'][0]
                     base, _ = os.path.splitext(os.path.basename(im_name))
 
                     instance = sample['instance'].squeeze()
-                    center = sample.get('center')
+                    ignore_flags = sample['ignore']
 
-                    # use any centers provided by dataset if exists
-                    if center is not None:
-                        center_dict = {id: center[0, id, [1, 0]].cpu().numpy()
-                                           for id in range(center[0].shape[0]) if
-                                           center[0, id, 0] > 0 and center[0, id, 1] > 0}
+                    if 'centerdir_groundtruth' in sample_:
+                        sample['centerdir_groundtruth'] = sample_['centerdir_groundtruth'][0][batch_i]
+
+                        # get center_dict from polar_gt and convert them to dictionary (filter-out non visible and ignored examples)
+                        # if ignore_flags is present then set to remove all groundtruths where ONLY ignore flag (encoded as 1) is present but not others
+                        # (do not remove other types such as truncated, overlap border, difficult)
+                        center_ignore = ignore_flags == 1 if ignore_flags is not None else None
+
+                        _, _, _, _, center, _, _, _ = CenterDirGroundtruth.parse_polar_groundtruth(sample['centerdir_groundtruth'])
+                        center_dict = CenterDirGroundtruth.convert_gt_centers_to_dictionary(center,
+                                                                                            instances=instance,
+                                                                                            ignore=center_ignore)
+
+                        if center_ignore is not None:
+                            for id in instance.unique():
+                                id = id.item()
+                                if id > 0 and id not in center_dict.keys():
+                                    instance[instance == id] = 0
                     else:
-                        center_dict = {
-                            id.item(): torch.nonzero(instance.squeeze() == id).float().mean(dim=0).cpu().numpy()
-                            for id in torch.unique(instance) if id > 0}
-
-                    # output_mask = output[0, -1]
-                    # output_r, output_cos, output_sin = output[0, 2], output[0, 1], output[0, 0]
-                    # predictions, pred_heatmap = center_estimator(output_mask, output_r, output_sin, output_cos,
-                    #                                              ignore=ignore, img=im, basename=base)
+                        center_dict = None
 
                     # extract prediction heatmap and sorted prediction list
                     pred_heatmap = torch.relu(center_heatmap[batch_i].unsqueeze(0).unsqueeze(0))

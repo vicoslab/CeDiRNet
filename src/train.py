@@ -14,6 +14,8 @@ import torch.multiprocessing
 
 from datasets import get_dataset
 from models import get_model, get_center_model
+from models.center_groundtruth import CenterDirGroundtruth
+
 from criterions import get_criterion
 from utils.utils import DistributedRandomSampler, HardExamplesBatchSampler
 from utils.utils import AverageMeter, Logger, Visualizer, distributed_sync_dict
@@ -302,17 +304,6 @@ class Trainer:
             class_labels = sample['label'].squeeze(dim=1)
             ignore = sample.get('ignore')
             centerdir_gt = sample.get('centerdir_groundtruth')
-            centers = sample.get('center')
-
-            # use any centers provided by dataset if exists
-            if centers is not None:
-                gt_centers_dict = [{id: centers[b, id, [1, 0]].cpu().numpy()
-                                   for id in range(centers[b].shape[0]) if centers[b, id, 0] > 0 and centers[b, id, 1] > 0 and id in torch.unique(instances[b])}
-                                        for b in range(len(centers))]
-            else:
-                gt_centers_dict = [{id.item(): torch.nonzero(instances[b].squeeze() == id).float().mean(dim=0).cpu().numpy()
-                                   for id in torch.unique(instances[b]) if id > 0}
-                                        for b in range(len(im))]
 
             loss_ignore = None
             if ignore is not None:
@@ -320,12 +311,14 @@ class Trainer:
                 # (i.e., ignore loss and any groundtruth objects at those pixels)
                 loss_ignore = ignore > 0
 
-                gt_centers_dict = [{k: c for k, c in gt_centers_dict[b].items()
-                                    if loss_ignore[b, 0][instances[b] == k].min() == 0}
-                                            for b in range(len(im))]
-
             # get difficult mask based on ignore flags (VALUE of 8 == difficult flag and VALUE of 2 == truncated flag )
             difficult = (((ignore & 8) | (ignore & 2)) > 0).squeeze(dim=1) if ignore is not None else torch.zeros_like(instances)
+
+            # get gt_centers from polar_gt and convert them to dictionary (filter-out non visible and ignored examples)
+            _, _, _, _, gt_centers, _, _, _ = CenterDirGroundtruth.parse_polar_groundtruth(centerdir_gt)
+            gt_centers_dict = CenterDirGroundtruth.convert_gt_centers_to_dictionary(gt_centers,
+                                                                                    instances=instances,
+                                                                                    ignore=loss_ignore)
 
             # retrieve and set random seed for hard examples from previous epoch
             # (will be returned as None if sample does not exist or is not hard-sample)

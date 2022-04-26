@@ -350,17 +350,6 @@ class Evaluator:
                 pred_heatmap = result['pred_heatmap']
                 center_model_name = result['center_model_name']
 
-                # if ignore_flags is present then set to remove all groundtruths where ONLY ignore flag (encoded as 1) is present but not others
-                # (do not remove other types such as truncated, overlap border, difficult)
-                if ignore_flags is not None:
-                    gt_centers_dict = {k: c for k, c in gt_centers_dict.items()
-                                                if not (c[0] >= 0 and c[1] >= 0 and c[0] < instances.shape[-2] and c[1] < instances.shape[-1]) or
-                                                    ignore_flags[0, 0, int(c[0]), int(c[1])] != 1}
-                    for id in instances.unique():
-                        id = id.item()
-                        if id > 0 and id not in gt_centers_dict.keys():
-                            instances[instances == id] = 0
-
                 # get difficult mask based on ignore flags (VALUE of 8 == difficult flag)
                 difficult = (ignore_flags & 8 > 0).squeeze() if ignore_flags is not None else torch.zeros_like(instances)
 
