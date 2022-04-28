@@ -10,7 +10,7 @@ import torch
 
 from datasets import get_dataset
 from models import get_model, get_center_model
-from utils.utils import Visualizer
+from utils.vis import Visualizer
 from utils.evaluation.center import CenterEvaluation
 from utils.evaluation.center_global_min import CenterGlobalMinimizationEval
 from utils.evaluation.center_global_min_patch import PatchMergeCenterGlobalMinimizationEval

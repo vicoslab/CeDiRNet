@@ -11,7 +11,8 @@ import torch
 from tqdm import tqdm
 from datasets.ImageFolderDataset import ImageFolderDataset
 from models import get_model, get_center_model
-from utils.utils import Visualizer
+from utils.vis import Visualizer
+
 
 class CeDiRNetInfer:
     def __init__(self, args):

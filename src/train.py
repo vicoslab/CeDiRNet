@@ -18,7 +18,8 @@ from models.center_groundtruth import CenterDirGroundtruth
 
 from criterions import get_criterion
 from utils.utils import DistributedRandomSampler, HardExamplesBatchSampler
-from utils.utils import AverageMeter, Logger, Visualizer, distributed_sync_dict
+from utils.utils import AverageMeter, Logger, distributed_sync_dict
+from utils.vis import Visualizer
 from utils import transforms as my_transforms
 
 from config import get_config_args
