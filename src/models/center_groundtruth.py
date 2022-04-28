@@ -135,12 +135,20 @@ class CenterDirGroundtruth(nn.Module):
     @staticmethod
     def convert_gt_centers_to_dictionary(gt_centers, instances, ignore=None):
 
-        gt_centers_dict = [{id: gt_centers[b, id, :2].cpu().numpy()
-                            for id in range(gt_centers[b].shape[0]) if gt_centers[b, id, 0] > 0 and gt_centers[b, id, 1] > 0 and id in torch.unique(instances[b])}
-                                for b in range(len(gt_centers))]
-        if ignore is not None:
-            gt_centers_dict = [{k: c for k, c in gt_centers_dict[b].items() if ignore[b, 0][instances[b] == k].min() == 0}
-                                    for b in range(len(gt_centers))]
+        gt_centers_dict = []
+        for b in range(len(gt_centers)):
+            valid_idx = torch.nonzero(torch.logical_and(gt_centers[b, :, 0] > 0, gt_centers[b, :, 1] > 0)).squeeze().cpu().numpy()
+            present_idx = torch.unique(instances[b]).cpu().numpy()
+
+            # extract centers from valid idx that are also present in instances
+            center_dict = {id: gt_centers[b, id, :2].cpu().numpy()
+                                for id in set(valid_idx).intersection(present_idx)}
+
+            # ignore centers that fall within ignore region
+            if ignore is not None:
+                center_dict = {k: c for k, c in center_dict.items() if ignore[b, 0][instances[b] == k].min() == 0}
+
+            gt_centers_dict.append(center_dict)
 
         return gt_centers_dict
 

@@ -75,6 +75,20 @@ class CeDiRNetProcesser:
 
                 output_batch, center_pred, center_heatmap = [center_output[k] for k in ['output', 'center_pred', 'center_heatmap']]
 
+                if 'centerdir_groundtruth' in sample_:
+                    # get gt_centers from polar_gt and convert them to dictionary (filter-out non visible and ignored examples)
+                    # if ignore_flags is present then set to remove all groundtruths where ONLY ignore flag (encoded as 1) is present but not others
+                    # (do not remove other types such as truncated, overlap border, difficult)
+                    instances = sample_['instance'].squeeze(dim=1)
+                    center_ignore = sample_['ignore'] == 1 if 'ignore' in sample_ else None
+
+                    _, _, _, _, gt_centers, _, _, _ = CenterDirGroundtruth.parse_polar_groundtruth(sample_['centerdir_groundtruth'])
+                    gt_centers_dict = CenterDirGroundtruth.convert_gt_centers_to_dictionary(gt_centers,
+                                                                                            instances=instances,
+                                                                                            ignore=center_ignore)
+                else:
+                    gt_centers_dict = None
+
                 sample_keys = sample_.keys()
 
                 for batch_i in range(min(dataset_it.batch_size, len(sample_['im_name']))):
@@ -87,22 +101,16 @@ class CeDiRNetProcesser:
                     base, _ = os.path.splitext(os.path.basename(im_name))
 
                     instance = sample['instance'].squeeze()
-                    ignore_flags = sample['ignore']
+                    ignore = sample.get('ignore')
 
                     if 'centerdir_groundtruth' in sample_:
                         sample['centerdir_groundtruth'] = sample_['centerdir_groundtruth'][0][batch_i]
 
-                        # get center_dict from polar_gt and convert them to dictionary (filter-out non visible and ignored examples)
-                        # if ignore_flags is present then set to remove all groundtruths where ONLY ignore flag (encoded as 1) is present but not others
-                        # (do not remove other types such as truncated, overlap border, difficult)
-                        center_ignore = ignore_flags == 1 if ignore_flags is not None else None
+                    if gt_centers_dict is not None:
+                        center_dict = gt_centers_dict[batch_i]
 
-                        _, _, _, _, center, _, _, _ = CenterDirGroundtruth.parse_polar_groundtruth(sample['centerdir_groundtruth'])
-                        center_dict = CenterDirGroundtruth.convert_gt_centers_to_dictionary(center,
-                                                                                            instances=instance,
-                                                                                            ignore=center_ignore)
-
-                        if center_ignore is not None:
+                        # manually remove instance that have been ignored
+                        if ignore is not None:
                             for id in instance.unique():
                                 id = id.item()
                                 if id > 0 and id not in center_dict.keys():
