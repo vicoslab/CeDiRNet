@@ -1,5 +1,30 @@
 # CeDiRNet: Center Direction Regression Network
 
+**[Visual Cognitive System Lab, ViCoS - UL, FRI - Ljubljana](https://vicos.si/research/)**
+
+
+[Domen Tabernik](https://www.vicos.si/people/domen_tabernik/), [Jon Muhovič](https://www.vicos.si/people/jon_muhovic/), [Danije Skočaj](https://www.vicos.si/people/danijel_skocaj/)
+
+[[`Paper`](https://doi.org/10.1016/j.patcog.2024.110540)] [[`Pre-print paper`](https://prints.vicos.si/publications/424/dense-center-direction-regression-for-object-counting-and-localization-with-point-supervision)]  [[`BibTeX`](#citation)]
+
+## Citation
+
+If using CeDiRNet please cite our paper using the following BibTeX entry:
+
+```bibtex
+@article{TabernikPR2024,
+  title = {Dense center-direction regression for object counting and localization with point supervision},
+  journal = {Pattern Recognition},
+  volume = {153},
+  pages = {110540},
+  year = {2024},
+  issn = {0031-3203},
+  doi = {https://doi.org/10.1016/j.patcog.2024.110540},
+  url = {https://www.sciencedirect.com/science/article/pii/S0031320324002917},
+  author = {Domen Tabernik and Jon Muhovič and Danijel Skočaj}
+}
+```
+
 ![CeDiRNet: Center Direction Regression Network!](intro.png "CeDiRNet")
 
 ## Installation
