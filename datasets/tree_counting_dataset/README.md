@@ -1,0 +1,1 @@
+Download from https://github.com/tongpinmo/PSSNet and create 512x512 patches uing `python ./datasets/tree_counting_dataset/create_patches.py [PATH_TO_TREE_DATASET]`.
