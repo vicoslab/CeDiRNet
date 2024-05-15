@@ -127,17 +127,18 @@ You may add new dataset by providing config files and dataset class:
 Scripts for running experiments related to the paper are in `./scripts/EXPERIMENTS_*.sh`. Please edit the following configurations before first use:
 
  * edit input/output paths and Conda environment in `./scripts/run_local.sh`
-  * set `ROOT_DIR` to CeDiRNet code
-  * set `CONDA_HOME` to conda home folder that contains `etc/profile.d/conda.sh`
+   * set `ROOT_DIR` to CeDiRNet code
+   * set `CONDA_HOME` to conda home folder that contains `etc/profile.d/conda.sh`
  * edit `SERVERS` env var in `./scripts/EXPERIMENTS_*.sh` for distributed training (e.g, `SERVERS="serverA:0,1,2,3 serverB:2,3 serverC:1,0"`)
  * edit `GPU_LIST` env var in `./scripts/EXPERIMENTS_*.sh` for parallel inference (e.g, `GPU_LIST=("serverA:0" "serverA:1" "serverB:0" "serverC:0")`)  
   
 Note that changing the number of GPUs used may require updating the batch size and hard sample size in configuration files. 
 
-You will also need to manuall donwload the dataset into `./datasets` subfolders:
+You will also need to manuall download all datasets into `./datasets` subfolders:
   * [Sorghum Plant Centers 2016 Dataset](https://engineering.purdue.edu/~sorghum/dataset-plant-centers-2016/)
   * [CARPK and PUCPR+ dataset](https://lafi.github.io/LPN/)
-  * [Acacia-6, Acacia-16 and Oilpal dataset](https://github.com/tongpinmo/PSSNet) (run `python ./datasets/tree_counting_dataset/create_patches.py [PATH_TO_TREE_DATASET]` to create 512x512 patches)
+  * [Acacia-6, Acacia-16 and Oilpal dataset](https://github.com/tongpinmo/PSSNet)
+    * run `python ./datasets/tree_counting_dataset/create_patches.py [PATH_TO_TREE_DATASET]` to create 512x512 patches
 
 Run experiments: 
 
