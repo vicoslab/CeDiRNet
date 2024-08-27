@@ -5,7 +5,7 @@
 
 [Domen Tabernik](https://www.vicos.si/people/domen_tabernik/), [Jon Muhovič](https://www.vicos.si/people/jon_muhovic/), [Danije Skočaj](https://www.vicos.si/people/danijel_skocaj/)
 
-[[`Paper`](https://doi.org/10.1016/j.patcog.2024.110540)] [[`Pre-print paper`](https://prints.vicos.si/publications/424/dense-center-direction-regression-for-object-counting-and-localization-with-point-supervision)]  [[`BibTeX`](#citation)]
+[[`Paper`](https://doi.org/10.1016/j.patcog.2024.110540)] [[`Pre-print paper`](https://prints.vicos.si/publications/424/dense-center-direction-regression-for-object-counting-and-localization-with-point-supervision)] [[`arXiv`](https://arxiv.org/abs/2408.14457)]  [[`BibTeX`](#citation)]
 
 ## Citation
 
